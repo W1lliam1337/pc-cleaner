@@ -5,6 +5,9 @@
 #include <fstream>
 #include <thread>
 #include <chrono>
+#include <intrin.h>
+#include <tchar.h>
+#pragma warning(disable : 4996)
 
 bool is_admin()
 {
@@ -123,9 +126,9 @@ bool enable_or_disable_service(const char* strServiceName, bool bIsEnable)
 		if (hService != nullptr)
 		{
 			result = ChangeServiceConfig(hService, SERVICE_NO_CHANGE,
-			                              bIsEnable ? SERVICE_AUTO_START : SERVICE_DISABLED,
-			                              SERVICE_NO_CHANGE,
-			                              nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+			                             bIsEnable ? SERVICE_AUTO_START : SERVICE_DISABLED,
+			                             SERVICE_NO_CHANGE,
+			                             nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 
 			CloseServiceHandle(hService);
 		}
@@ -278,7 +281,7 @@ void features()
 		std::cout << " \n";
 		std::cout << color::yellow("Write the number of the function you want to turn off\n");
 		std::cout << color::yellow(
-			" 1 - Clean up temp windows files\n 2 - Clean up temp app files\n 3 - Remove 100% hardware usage\n 4 - Remove windows defender and hidden system monitoring\n 5 - Remove windows store\n 6 - Clean up chrome cookie files\n 7 - Remove windows updates\n 8 - Enable seconds in clock\n 9 - Fix for accessing administrative rules\n");
+			" 1 - Clean up temp windows files\n 2 - Clean up temp app files\n 3 - Remove 100% hardware usage\n 4 - Remove windows defender and hidden system monitoring\n 5 - Remove windows store\n 6 - Clean up chrome cookie files\n 7 - Remove windows updates\n 8 - Enable seconds in clock\n 9 - Fix for accessing administrative rules\n 10 - System info\n");
 		int var;
 		std::cin >> var;
 
@@ -818,6 +821,87 @@ void features()
 
 				std::cout << color::green("[+] The reg key \'CF_UNICODETEXT\' value changed to 13\n");
 				std::cout << color::red("[!] Plz, reboot your pc \n");
+			}
+			break;
+		case 10:
+			{
+				MEMORYSTATUSEX statex{};
+				statex.dwLength = sizeof statex;
+				GlobalMemoryStatusEx(&statex);
+
+				std::cout << color::green("System Info:\n");
+				std::cout << color::red("-----------------------------------------MEM---------------------------------------\n");
+				{
+					std::cout << color::green("Memory in use: ") << statex.dwMemoryLoad << "%\n";
+					std::cout << color::green("Total MB of physical memory: ") << statex.ullTotalPhys / 1024 / 1024 << std::endl;
+					std::cout << color::green("Free MB of physical memory: ") << statex.ullAvailPhys / 1024 / 1024 << std::endl;
+				}
+				std::cout << color::red("-----------------------------------------CPU---------------------------------------\n");
+				{
+					SYSTEM_INFO lpSystemInfo;
+					GetSystemInfo(&lpSystemInfo);
+					std::cout << color::green("Active processor mask: ") << lpSystemInfo.dwActiveProcessorMask << std::endl;
+					std::cout << color::green("Number of processors: ") << lpSystemInfo.dwNumberOfProcessors << std::endl;
+					std::cout << color::green("Processor type: ") << lpSystemInfo.dwProcessorType << std::endl;
+
+					DWORD buffer_size = _MAX_PATH;
+					DWORD dwMHz = _MAX_PATH;
+					HKEY hkey;
+
+					// open the key where the proc speed is hidden:
+					long error = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
+					                           R"(HARDWARE\DESCRIPTION\System\CentralProcessor\0)",
+						0,
+						KEY_READ,
+						&hkey);
+
+					if (error != ERROR_SUCCESS)
+					{
+						wchar_t constexpr buffer[260]{};
+		
+						FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,
+						              nullptr,
+							error,
+							0,
+							(CHAR*)buffer,
+							_MAX_PATH,
+							nullptr);
+						wprintf(buffer);
+						system("pause");
+						return;
+					}
+		
+					RegQueryValueEx(hkey, "~MHz", nullptr, nullptr, reinterpret_cast<LPBYTE>(&dwMHz), &buffer_size);
+					std::cout << color::green("CPU speed: ") << dwMHz << "Mhz\n";
+				}
+				std::cout << color::red("-----------------------------------------VC---------------------------------------\n");
+				{
+					for (int i = 0; ; i++)
+					{
+						DISPLAY_DEVICE dd = { sizeof dd, {0} };
+						if (BOOL f = EnumDisplayDevices(nullptr, i, &dd, EDD_GET_DEVICE_INTERFACE_NAME); !f)
+							break;
+
+						std::cout << color::green(dd.DeviceString) << std::endl;
+					}
+				}
+				std::cout << color::red("-----------------------------------------WIN---------------------------------------\n");
+				{
+					DWORD version = 0;
+					DWORD major_version = 0;
+					DWORD minor_version = 0;
+					DWORD build = 0;
+
+					version = GetVersion();
+
+					major_version = static_cast<DWORD>(LOBYTE(LOWORD(version)));
+					minor_version = static_cast<DWORD>(HIBYTE(LOWORD(version)));
+
+					if (version < 0x80000000)
+						build = static_cast<DWORD>(HIWORD(version));
+
+					std::cout << color::green("Version is ") << major_version << "." << minor_version << " " << build << std::endl;
+				}
 			}
 			break;
 		default: break;
