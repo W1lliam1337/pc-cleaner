@@ -11,6 +11,7 @@
 - Enable seconds in clock
 - Fix for accessing administrative rules
 - Get information about the system
+- System file checker
 #
 
 # How to use?
