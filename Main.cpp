@@ -93,8 +93,8 @@ BOOL __stdcall stop_dependent_services(const SC_HANDLE& schSCManager, const SC_H
 
 					if (ssp.dwCurrentState == SERVICE_STOPPED)
 						break;
-
-					if (constexpr DWORD timeout = 30000; GetTickCount() - start_time > timeout)
+					constexpr DWORD timeout = 30000;
+					if (GetTickCount() - start_time > timeout)
 						return FALSE;
 				}
 			}
@@ -281,7 +281,7 @@ void features()
 		std::cout << " \n";
 		std::cout << color::yellow("Write the number of the function you want to turn off\n");
 		std::cout << color::yellow(
-			" 1 - Clean up temp windows files\n 2 - Clean up temp app files\n 3 - Remove 100% hardware usage\n 4 - Remove windows defender and hidden system monitoring\n 5 - Remove windows store\n 6 - Clean up chrome cookie files\n 7 - Remove windows updates\n 8 - Enable seconds in clock\n 9 - Fix for accessing administrative rules\n 10 - System info\n");
+			" 1 - Clean up temp windows files\n 2 - Clean up temp app files\n 3 - Remove 100% hardware usage\n 4 - Remove windows defender and hidden system monitoring\n 5 - Remove windows store\n 6 - Clean up chrome cookie files\n 7 - Remove windows updates\n 8 - Enable seconds in clock\n 9 - Fix for accessing administrative rules\n 10 - System info\n 11 - System file checker (SFC)\n");
 		int var;
 		std::cin >> var;
 
@@ -391,6 +391,7 @@ void features()
 					system("pause");
 					return;
 				}
+
 				std::cout << color::green("[+] The reg key \'DisableScanOnRealtimeEnable\' value changed to 1\n");
 
 				if (RegSetValueEx(key, "DisableIOAVProtection", 0, REG_DWORD, reinterpret_cast<LPBYTE>(&payload),
@@ -830,18 +831,24 @@ void features()
 				GlobalMemoryStatusEx(&statex);
 
 				std::cout << color::green("System Info:\n");
-				std::cout << color::red("-----------------------------------------MEM---------------------------------------\n");
+				std::cout << color::red(
+					"-----------------------------------------MEM---------------------------------------\n");
 				{
 					std::cout << color::green("Memory in use: ") << statex.dwMemoryLoad << "%\n";
-					std::cout << color::green("Total MB of physical memory: ") << statex.ullTotalPhys / 1024 / 1024 << std::endl;
-					std::cout << color::green("Free MB of physical memory: ") << statex.ullAvailPhys / 1024 / 1024 << std::endl;
+					std::cout << color::green("Total MB of physical memory: ") << statex.ullTotalPhys / 1024 / 1024 <<
+						std::endl;
+					std::cout << color::green("Free MB of physical memory: ") << statex.ullAvailPhys / 1024 / 1024 <<
+						std::endl;
 				}
-				std::cout << color::red("-----------------------------------------CPU---------------------------------------\n");
+				std::cout << color::red(
+					"-----------------------------------------CPU---------------------------------------\n");
 				{
 					SYSTEM_INFO lpSystemInfo;
 					GetSystemInfo(&lpSystemInfo);
-					std::cout << color::green("Active processor mask: ") << lpSystemInfo.dwActiveProcessorMask << std::endl;
-					std::cout << color::green("Number of processors: ") << lpSystemInfo.dwNumberOfProcessors << std::endl;
+					std::cout << color::green("Active processor mask: ") << lpSystemInfo.dwActiveProcessorMask <<
+						std::endl;
+					std::cout << color::green("Number of processors: ") << lpSystemInfo.dwNumberOfProcessors <<
+						std::endl;
 					std::cout << color::green("Processor type: ") << lpSystemInfo.dwProcessorType << std::endl;
 
 					DWORD buffer_size = _MAX_PATH;
@@ -850,42 +857,45 @@ void features()
 
 					// open the key where the proc speed is hidden:
 					long error = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-					                           R"(HARDWARE\DESCRIPTION\System\CentralProcessor\0)",
-						0,
-						KEY_READ,
-						&hkey);
+					                          R"(HARDWARE\DESCRIPTION\System\CentralProcessor\0)",
+					                          0,
+					                          KEY_READ,
+					                          &hkey);
 
 					if (error != ERROR_SUCCESS)
 					{
 						wchar_t constexpr buffer[260]{};
-		
+
 						FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM,
 						              nullptr,
-							error,
-							0,
-							(CHAR*)buffer,
-							_MAX_PATH,
-							nullptr);
+						              error,
+						              0,
+						              (CHAR*)buffer,
+						              _MAX_PATH,
+						              nullptr);
 						wprintf(buffer);
 						system("pause");
 						return;
 					}
-		
+
 					RegQueryValueEx(hkey, "~MHz", nullptr, nullptr, reinterpret_cast<LPBYTE>(&dwMHz), &buffer_size);
 					std::cout << color::green("CPU speed: ") << dwMHz << "Mhz\n";
 				}
-				std::cout << color::red("-----------------------------------------VC---------------------------------------\n");
+				std::cout << color::red(
+					"-----------------------------------------VC---------------------------------------\n");
 				{
 					for (int i = 0; ; i++)
 					{
-						DISPLAY_DEVICE dd = { sizeof dd, {0} };
-						if (BOOL f = EnumDisplayDevices(nullptr, i, &dd, EDD_GET_DEVICE_INTERFACE_NAME); !f)
+						DISPLAY_DEVICE dd = {sizeof dd, {0}};
+						BOOL f = EnumDisplayDevices(nullptr, i, &dd, EDD_GET_DEVICE_INTERFACE_NAME);
+						if (!f)
 							break;
 
 						std::cout << color::green(dd.DeviceString) << std::endl;
 					}
 				}
-				std::cout << color::red("-----------------------------------------WIN---------------------------------------\n");
+				std::cout << color::red(
+					"-----------------------------------------WIN---------------------------------------\n");
 				{
 					DWORD version = 0;
 					DWORD major_version = 0;
@@ -900,10 +910,20 @@ void features()
 					if (version < 0x80000000)
 						build = static_cast<DWORD>(HIWORD(version));
 
-					std::cout << color::green("Version is ") << major_version << "." << minor_version << " " << build << std::endl;
+					std::cout << color::green("Version is ") << major_version << "." << minor_version << " " << build <<
+						std::endl;
 				}
 			}
 			break;
+		case 11:
+		{
+			/* @TODO: Working only on x64 solution platform */
+			system("sfc.exe /scannow");
+
+			/* lol */
+			//if (GetLastError())
+			//	system(R"(C:\Windows\System32\sfc.exe /scannow)");
+		} break;
 		default: break;
 		}
 	}
