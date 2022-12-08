@@ -281,7 +281,7 @@ void features()
 		std::cout << " \n";
 		std::cout << color::yellow("Write the number of the function you want to turn off\n");
 		std::cout << color::yellow(
-			" 1 - Clean up temp windows files\n 2 - Clean up temp app files\n 3 - Remove 100% hardware usage\n 4 - Remove windows defender and hidden system monitoring\n 5 - Remove windows store\n 6 - Clean up chrome cookie files\n 7 - Remove windows updates\n 8 - Enable seconds in clock\n 9 - Fix for accessing administrative rules\n 10 - System info\n 11 - System file checker (SFC)\n");
+			" 1 - Clean up temp windows files\n 2 - Clean up temp app files\n 3 - Remove 100% hardware usage\n 4 - Remove windows defender and hidden system monitoring\n 5 - Remove windows store\n 6 - Clean up chrome cookie files\n 7 - Remove windows updates\n 8 - Enable seconds in clock\n 9 - Fix for accessing administrative rules\n 10 - System info\n 11 - System file checker (SFC)\n 12 - Evaluate register based ban risk\n");
 		int var;
 		std::cin >> var;
 
@@ -924,6 +924,104 @@ void features()
 			//if (GetLastError())
 			//	system(R"(C:\Windows\System32\sfc.exe /scannow)");
 		} break;
+		case 12:
+		{
+			/* evaluates reg */
+			std::cout << color::green("Analyzing Registry...") << std::endl;
+
+			char selection = ' ';
+
+			HKEY reg_key;
+			LSTATUS status = 0;
+			status = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Hex-Rays\\IDA\\History64", 0, KEY_ALL_ACCESS, &reg_key);
+			if (status == ERROR_SUCCESS)
+			{
+				DWORD values = 0;
+				if (ERROR_SUCCESS == (RegQueryInfoKeyA(reg_key, NULL, NULL, NULL, NULL, NULL, NULL, &values, NULL, NULL, NULL, NULL)))
+				{
+					std::cout << color::light_yellow("[IDA] Found ") << values << color::light_yellow(" potentially risky value(s).") << std::endl;
+					if (values > 0)
+					{
+						std::cout << color::light_yellow("[IDA] Analyzing value(s)...") << std::endl;
+
+						//checking strings for suspicious names
+						std::string sus_names[] = { "modern", "warfare", "black", "ops", "call", "duty", "cod", "mw", "bocw", "war", "cold", "dump" };
+						size_t found = 0;
+						TCHAR data[MAX_PATH];
+						DWORD dwSize = sizeof(data);
+						for (unsigned int i = 0; i < values; i++)
+						{
+							status = RegGetValueA(reg_key, NULL, std::to_string(i).c_str(), RRF_RT_REG_SZ, NULL, &data, &dwSize);
+							if (status == ERROR_SUCCESS)
+							{
+								std::string str = data;
+								for (int j = 0; j < sizeof(sus_names); j++)
+								{
+									found = str.find(sus_names[i]);
+									if (found != str.npos)
+									{
+										if (ERROR_SUCCESS != (RegDeleteValueA(reg_key, std::to_string(i).c_str())))
+											std::cout << color::red("[IDA] Could not delete dangerous element. Error: ") << GetLastError() << std::endl;
+										else {
+											std::cout << color::green("[IDA] Deleted Element ") << i << color::green(" - found ") << sus_names[j] << color::green(" inside of data: ") << str << std::endl;
+											break;
+										}
+									}
+								}
+							}
+							else
+								std::cout << color::red("[IDA] Error: ") << GetLastError() << color::red(" while trying to obtain data of value ") << i << std::endl;
+						}
+
+						std::cout << color::green("[IDA] Key values analyzed. Moderate Risk caused by IDA keys inside of current users registry.") << std::endl;
+					}
+				}
+				else
+					std::cout << color::red("Unable to get key info! Extended Error Information: ") << GetLastError() << std::endl;
+				RegCloseKey(reg_key);
+			}
+			else
+			{
+				if (GetLastError() != 0x0)	//do not display an error if the key doesn't even exist.
+					std::cout << color::red("Can not open registry key. Error Information: ") << GetLastError() << std::endl;
+			}
+			status = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Hex-Rays\\IDA\\History\\UIFLTR", 0, KEY_ALL_ACCESS, &reg_key);
+			if (status == ERROR_SUCCESS)
+			{
+				DWORD values = 0;
+				if (ERROR_SUCCESS == (RegQueryInfoKeyA(reg_key, NULL, NULL, NULL, NULL, NULL, NULL, &values, NULL, NULL, NULL, NULL)))
+				{
+					std::cout << color::light_yellow("[IDA] Found ") << values << color::light_yellow(" search histories.") << std::endl;
+					if (values > 0) 
+					{
+						std::cout << color::light_yellow("[IDA] Cleanup search histories? [y/n]\n >");
+						std::cin >> selection;
+						if (selection == 'y')
+						{
+							for (unsigned int i = 0; i < values; i++)
+							{
+								status = RegDeleteValueA(reg_key, std::to_string(i).c_str());
+								if (status == ERROR_SUCCESS)
+									std::cout << color::green("[IDA] Element ") << i << color::green(" deleted!") << std::endl;
+								else
+									std::cout << color::red("[IDA] Error: ") << GetLastError() << color::red(" while trying to delete ") << i << std::endl;
+							}
+						}
+					}
+				}
+				else
+					std::cout << color::red("[IDA] Unable to get key info! Extended Error Information: ") << GetLastError() << std::endl;
+				RegCloseKey(reg_key);
+			}
+			else
+			{
+				if (GetLastError() != 0x0)
+					std::cout << color::red("[IDA] Can not open registry key. Error Information: ") << GetLastError() << std::endl;
+			}
+
+			std::cout << color::green("===Done!===") << std::endl;
+			
+		} break;	
 		default: break;
 		}
 	}

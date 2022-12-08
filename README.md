@@ -12,6 +12,7 @@
 - Fix for accessing administrative rules
 - Get information about the system
 - System file checker
+- Registry Checker
 #
 
 # How to use?
